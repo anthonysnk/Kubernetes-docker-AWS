@@ -1,1 +1,1 @@
-kops create cluster --name NAMECLUSTER --zones=us-east-1a,us-east-1b,us-east-1c --cloud aws
+kops create cluster --name testkops.snkops.com --zones=us-east-1a,us-east-1b,us-east-1c --cloud aws

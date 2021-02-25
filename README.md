@@ -118,6 +118,12 @@
 - [Kubernetes en AWS con Kops](#kubernetes-en-aws-con-kops)
   - [Instalacion en Linux](#instalacion-en-linux)
   - [Comandos](#comandos-4)
+- [EKS](#eks)
+  - [comandos](#comandos-5)
+  - [pod affinity](#pod-affinity)
+  - [pod antiaffinity](#pod-antiaffinity)
+  - [EKSCTL](#eksctl)
+    - [comandos](#comandos-6)
 
 # NOTAS
 
@@ -1151,6 +1157,8 @@ spec:
 
 # Kubernetes en AWS con Kops
 
+NOTA: Kops ya no es la mejor herramienta para desplegar un cluster
+
 ```links
 https://kubernetes.io/docs/setup/production-environment/tools/kops/
 https://github.com/kubernetes/kops/tree/master/docs
@@ -1173,3 +1181,71 @@ export KOPS_STATE_STORE="s3://vcc-kops-test-snk/"
 ```
 
 - `source vars.rc`: con esta exportamos nuestra varible KOPS_STATE_STORE al env.
+
+# EKS
+
+Cremos un rol con el servicio de ekss
+Creamos un rol con las siguintes politicas para la creacion de nodos
+
+- `AmazonEKSWorkerNodePolicy`
+- `AmazonEKS_CNI_Policy`
+- `AmazonEC2ContainerRegistryReadOnly`
+
+Primero que nada debemmos configurar la CLI de amazon en nuestra maquina.
+
+## comandos
+
+| comando                                          | uso                                                           |
+| ------------------------------------------------ | ------------------------------------------------------------- |
+| `aws eks list-clusters`                          | Podemos en listar los cluster con el comando                  |
+| `rm ~/.kube/config`                                | Eliminar condiguraciones anteiores de kube en nuestra maquina |
+| `aws eks update-kubeconfig --name CLUSTENAME`    | Para configurar el kubeconfig                                 |
+| `aws eks get-token --cluster-name NOMBRECLUSTER` | Obtener un token de acceso al cluster                         |
+| `kubectl get nodes`                              | Obtener los nodos en aws                                      |
+| `kubectl -n namespace get all`                   | obtener todos los recursos de un namespace                    |
+| `kubectl -n namespace get all -o wide`           | obtener en que nodo esta corriendo                            |
+| `kubectl delete -f affinity-node.yaml`           | Borrando recursos creado                                      |
+## pod affinity
+
+Nos permite lanzar un pod en un nodo en concreto
+
+## pod antiaffinity
+
+Nos permite lanzar un pod en cualquier nodo menos uno en concreto.
+
+## EKSCTL
+
+Es la tool de la linea de comando de eks, que ayuda a gestionar eks cluster desde linea de comandos de una forma sencilla.
+
+https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html
+
+### comandos
+
+| comando             | uso                                                      |
+| ------------------- | -------------------------------------------------------- |
+| eksclt version      | Conocer la version de eksctl                             |
+| eksctl associate    | Associate resources with a cluster                       |
+| eksctl completion   | Generates shell completion scripts for bash, zsh or fish |
+| eksctl create       | Create resource(s)                                       |
+| eksctl delete       | Delete resource(s)                                       |
+| eksctl disassociate | Disassociate resources from a cluster                    |
+| eksctl drain        | Drain resource(s)                                        |
+| eksctl enable       | Enable features in a cluster                             |
+| eksctl generate     | Generate gitops manifests                                |
+| eksctl get          | Get resource(s)                                          |
+| eksctl help         | Help about any command                                   |
+| eksctl scale        | Scale resources(s)                                       |
+| eksctl set          | Set values                                               |
+| eksctl unset        | Unset values                                             |
+| eksctl update       | Update resource(s)                                       |
+| eksctl upgrade      | Upgrade resource(s)                                      |
+| eksctl utils        | Various utils                                            |
+| eksctl version      | Output the version of eksctl                             |
+
+- `eksctl create cluster -f cluster.yaml`: crear un lcuster apartir de un archivo
+- `eksctl create cluster --name cluster-snk-eksctl --without-nodegroup --managed`: Creando un cluster sin un grupo de nodos
+- `eksctl utils write-kubeconfig --cluster NOMBRECLUSTER`: Escribira el archivo de configuracion de ese cluster ya creado
+- `eksctl create nodegroup --cluster cluster-snk-eksctl --name NODENAME --nodes 1 --nodes-min 1 --nodes-max 1 --node-type m5.large --node-labels project=web --managed` : con el podemos crear un nodo
+- `eksctl delete nodegroup --cluster NOMBRECLUSTER --name NODONAME`: Eliminar un nodo de un cluster
+- `--managed`: no sirve para decirle a eksctl que el nodo que creamos es gestionado por aws
+- `eksctl delete cluster NAMECLUSTE`: borrar el cluster
