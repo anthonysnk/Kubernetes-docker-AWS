@@ -124,6 +124,48 @@
   - [pod antiaffinity](#pod-antiaffinity)
   - [EKSCTL](#eksctl)
     - [comandos](#comandos-6)
+- [Fargate](#fargate)
+- [Annotations](#annotations)
+- [CURSO PLATZI](#curso-platzi)
+  - [Repaso de contenedores e introducción a k8s](#repaso-de-contenedores-e-introducción-a-k8s)
+  - [De pods a contenedores](#de-pods-a-contenedores)
+    - [Docker & Kubernetes](#docker--kubernetes)
+    - [Kubernetes en la práctica](#kubernetes-en-la-práctica)
+  - [Arquitectura de K8s](#arquitectura-de-k8s)
+    - [Nodo Master](#nodo-master)
+    - [Tipos de controller manager](#tipos-de-controller-manager)
+    - [Componentes muy importantes que viven en los nodos:](#componentes-muy-importantes-que-viven-en-los-nodos)
+  - [Modelos declarativos e imperativos](#modelos-declarativos-e-imperativos)
+    - [Imperativo](#imperativo)
+    - [Declarativo](#declarativo)
+  - [Visión general del modelo de red](#visión-general-del-modelo-de-red)
+  - [Kubectl](#kubectl-1)
+  - [comandos](#comandos-7)
+  - [Deployments y replica sets](#deployments-y-replica-sets)
+  - [Accediendo a nuestros PODS a través de servicios](#accediendo-a-nuestros-pods-a-través-de-servicios)
+  - [Enrutando el tráfico utilizando servicios](#enrutando-el-tráfico-utilizando-servicios)
+  - [Desplegando nuestra app en k8s](#desplegando-nuestra-app-en-k8s)
+    - [Exponer un puerto en el node](#exponer-un-puerto-en-el-node)
+  - [Exponiendo servicios interna y externamente (kubectl-proxy)](#exponiendo-servicios-interna-y-externamente-kubectl-proxy)
+  - [Despliegues controlados](#despliegues-controlados)
+    - [Comandos](#comandos-8)
+  - [cambiar el editor de kubectl](#cambiar-el-editor-de-kubectl)
+  - [Healthchecks](#healthchecks)
+  - [Gestionar stacks con Helm](#gestionar-stacks-con-helm)
+  - [Gestionando la configuración aplicativas utilizando Config Maps](#gestionando-la-configuración-aplicativas-utilizando-config-maps)
+  - [Volumenes](#volumenes)
+  - [Introducción a namespaces](#introducción-a-namespaces)
+  - [Setear contexto para usar un namespace diferente](#setear-contexto-para-usar-un-namespace-diferente)
+  - [Crear un namespace](#crear-un-namespace)
+  - [crear app en un namespace](#crear-app-en-un-namespace)
+  - [crear servicio](#crear-servicio)
+  - [Autenticación y autorización](#autenticación-y-autorización)
+  - [Service account tokens](#service-account-tokens)
+  - [RBAC](#rbac)
+    - [Role and ClusterRole](#role-and-clusterrole)
+    - [RoleBinding and ClusterRoleBinding](#rolebinding-and-clusterrolebinding)
+  - [Recomendaciones para implementar Kubernetes en tu organización o proyectos](#recomendaciones-para-implementar-kubernetes-en-tu-organización-o-proyectos)
+- [GitOps](#gitops)
 
 # NOTAS
 
@@ -1198,7 +1240,7 @@ Primero que nada debemmos configurar la CLI de amazon en nuestra maquina.
 | comando                                          | uso                                                           |
 | ------------------------------------------------ | ------------------------------------------------------------- |
 | `aws eks list-clusters`                          | Podemos en listar los cluster con el comando                  |
-| `rm ~/.kube/config`                                | Eliminar condiguraciones anteiores de kube en nuestra maquina |
+| `rm ~/.kube/config`                              | Eliminar condiguraciones anteiores de kube en nuestra maquina |
 | `aws eks update-kubeconfig --name CLUSTENAME`    | Para configurar el kubeconfig                                 |
 | `aws eks get-token --cluster-name NOMBRECLUSTER` | Obtener un token de acceso al cluster                         |
 | `kubectl get nodes`                              | Obtener los nodos en aws                                      |
@@ -1249,3 +1291,656 @@ https://docs.aws.amazon.com/eks/latest/userguide/eksctl.html
 - `eksctl delete nodegroup --cluster NOMBRECLUSTER --name NODONAME`: Eliminar un nodo de un cluster
 - `--managed`: no sirve para decirle a eksctl que el nodo que creamos es gestionado por aws
 - `eksctl delete cluster NAMECLUSTE`: borrar el cluster
+
+# Fargate
+
+AWS Fargate es una tecnología que proporciona capacidad informática de tamaño adecuado y bajo demanda para contenedores. Se deben seleccionar las redes privadas.
+
+# Annotations
+
+Se usan para agregar datos a nuestro objetos.
+
+# CURSO PLATZI
+
+## Repaso de contenedores e introducción a k8s
+
+`¿Qué significa Kubernetes? ¿Qué significa K8S?`
+
+El nombre Kubernetes proviene del griego y significa timonel o piloto. Es la raíz de gobernador y de cibernética. K8s es una abrevación que se obtiene al reemplazar las ocho letras “ubernete” con el número 8.
+
+`Contenedor`: no es una entidad. Son distintas tecnologias que trabajando en conjunto crean un contenedor.
+Las 3 tecnologias son:
+
+- `CGroups`: Asignan a cada contenedor/proceso los recursos va a utilizar (memoria, disco, cpu). Limitan el uso de recursos del sistema operativo para cada contenedor.
+
+- `Chroot`: Nos permite que nuestro proceso/container tenga visibilidad sobre archivos donde tiene que trabajar y no acceder a otros recursos del sistema.
+
+- `Namespaces`: (son 7, aqui los mas importantes):
+
+`Mount`: Nos permite que nuestro proceso tenga una visibilidad reducida de los directorios. Esto permite que dos contenedores que trabajen sobre un sistema de archivos no se interfieran entre si.
+
+`Networking`: Permite que cada contenedor tenga su dirección IP, su tabla de rutas, su interfaz de red, y que no interfiera con otros contenedores.
+Concepto de POD: Entidad atomica scheduleable - Entidad sobre la cual kubernetes va a ejecutar los contenedores. (se verá en detalle más adelante).
+
+`PID o de proceso`: si ejecutamos un ps cuando ejecutamos nuestro contenedor, vamos a ver que nuestro contenedor es el process id 1 y no vemos todo el resto de los procesos del SO. Esto es posible gracias al namespace de procesos. (se verá en detalle más adelante).
+
+## De pods a contenedores
+
+### Docker & Kubernetes
+
+- Docker se encarga principalmente de gestionar los contenedores.
+- Kubernetes es una evolución de proyectos de Google Borg & Omega.
+- Kubernetes pertenece a la CNCF (Cloud Native Computing Foundation).
+- Todos los cloud providers (GCP/AWS/Azure/DO) ofrecen servicios de managed k8s utilizando Docker como su container runtime
+- Es la plataforma más extensiva para orquestación de servicios e infraestructura
+
+### Kubernetes en la práctica
+
+- K8s permite correr varias réplicas y asegurarse que todas se encuentren funcionando.
+- Provee un balanceador de carga interno o externo automáticamente para nuestros servicios.
+- Definir diferentes mecanismos para hacer roll-outs de código.
+- Políticas de scaling automáticas.
+- Jobs batch.
+- Correr servicios con datos stateful.
+- Todos los contenedores que viven dentro de un mismo Pod comparten el mismo segmento de red.
+
+## Arquitectura de K8s
+
+### Nodo Master
+
+- `API Server`: A lo que todo se conecta, los agentes, el CLI, el dashboard etc. Cuando se cae un nodo master es lo que se pierde. Se usa el algoritmo de ruft para algoritmo de elección.
+  
+- `Scheduler`: Cuando se deben crear un job, un pod en máquinas específicas, el scheduler se encarga de asignar las tareas y administrar los flujos de trabajos, revisando siempre las restricciones y los recursos disponibles.
+  
+- `Controller Manager`: Es un proceso que está en un ciclo de reconciliación constante buscando llegar al estado deseado con base al modelo declarativo con el que se le dan instrucciones a K8s.
+
+### Tipos de controller manager
+
+- Replica manager
+- Deployment manager
+- Service manager
+  
+`Etcd`: Key value store que permite que el cluster este altamente disponible.
+### Componentes muy importantes que viven en los nodos:
+
+- `Kubelet`: Agente de kubernetes, se conecta con el control play y le pregunta que recursos (pods, contenedores) debo correr al scheduler via API Server. Monitorea los pods constantemente para saber si están vivos, los recursos disponibles etc y le comunica constantemente al scheduler via API Server.
+
+- `Kube-proxy`: Se encarga de balancear el tráfico que corre en nuestros contenedores/servicios. Una vez llega una request se encarga de decidir a que pod y contenedor debe de ir.
+Nodos == Minions
+
+Todos los nodos y masters están conectados a una red física para poder hablarsen entre sí.
+
+## Modelos declarativos e imperativos
+
+Los control managers se encargan de estar en un loop constante de reconciliación y tratar de converger a ese estado deseado, ese es un sistema declarativo. Un sistema imperativo parece un sistema fácil de seguir y está compuesto por una serie de pasos que deben seguirse a rajatabla.
+
+Kubernetes hace énfasis en ser un sistema declarativo
+
+- Declarativo: “Quiero una taza de té”
+- Imperativo: “Hervir agua, agregar hojas de té y servir en una taza”
+- Declarativo parece sencillo (siempre y cuando uno sepa cómo hacerlo)
+- Todo en Kubernetes se crea desde un spec que describe cuál es el estado deseado del sistema
+- Kubernetes constantemente converge con esa especificación
+
+### Imperativo
+
+Un sistema es imperativo cuando ejecuta una seria de pasos, que deben seguir un orden especifico. Si algun paso se interrumpe, la secuencia inicia desde el paso 1.
+
+### Declarativo
+
+Un sistema es declarativo cuando trata de converger a un estado deseado, a partir de un estado actual.
+
+## Visión general del modelo de red
+
+- Todo el cluster es una gran red del mismo segmento
+- Todos los nodos deben conectarse entre si, sin NAT (Network Adress Translation)
+- Todos los pods deben conectarse entre si, sin NAT
+kube-proxy es el componente para conectarnos a pods y contenedores (userland proxy/iptables)
+- Los pods trabajan a capa 3 (transporte) y los servicios a capa 4 (protocolos)
+
+``` yaml
+NOTA: Los pods trabajan en la capa 3 y los servicios en la capa 4
+```
+
+## Kubectl
+
+`Kubectl` es la herramienta CLI para interactuar con el cluster de kubernetes, puede usarse para desplegar pods de pruebas, acceder a los contenedores y realizar algunos comandos como get nodes o get services
+
+En .kube es donde se encuentra nuestro archivo config, la configuración de kubernetes.
+
+`kubectl get nodes`: lista todos los nodos que tiene nuestro cluster
+
+`kubectl --config`: puedes pasarle el archivo de configuración en caso de estar usando uno diferente.
+
+`kubectl --server --user`: especificas la configuración sin necesidad de darle un archivo.
+
+`kubectl get nodes -a wide`: muestra más datos de los nodos.
+
+`kubectl describe nodes node1`: da mucha información de ese nodo en especifico.
+
+`kubectl explain node`: permite ver la definición de todo lo relacionado a ese nodo.
+
+https://www.josedomingo.org/pledin/2018/06/recursos-de-kubernetes-pods/
+
+
+## comandos
+
+| comando                                   | uso                                  |
+| ----------------------------------------- | ------------------------------------ |
+| kubectl logs deploy/pingpong              | mostrara los logs del deploy pinpong |
+| kubectl logs deploy/pingpong --tail 20    | Ultimas 20 lineas del logs           |
+| kubectl logs deploy/pingpong --tail 20 -f | ultimas 20 lineas en tiempo real     |
+| kubectl discribe pod nombre pod| Obtiene informacion del pod|
+
+## Deployments y replica sets
+
+Existe una relacion entre los deployments y los replicasets.
+
+`El DEPLOYMENT` es un construct, una estructura, del mas alto nivel que va a permitir escalar nuestros pods, hacer rolling upgrades y hacer rollbacks.
+
+`Multiples deployments` pueden entrar en juego para generar un canary deployment (ej: dos versiones de una aplicacion con la 1 corriendo con 5 pods, promovemos un pod a la version 2, enviamos un poco de trafico revisando las metricas para ver que este todo bien, y mandamos otro pod para ver que todo funcione bien y asi hasta que esten todos. Si algo falla, se hace rollback)
+
+El deployment permite hacer este workflow pero delega al replicaset la creacion y el scaling de los pods.
+
+`El REPLICASET` es un construct del mas low level que se asegura de que haya una cantidad de pods definida corriendo en un determinado momento. Es raro que lo modifiquemos directamente, sino a traves del deployment.
+
+## Accediendo a nuestros PODS a través de servicios
+
+- `Cluster IP`: Una IP virtual es asignada para el servicio
+- `NodePort`: Un puerto es asignado para el servicio en todos los nodos
+- `Load Balancer`: Un balanceador externo es provisionado para el servicio. Solo disponible cuando se usa un servicio con un balanceador
+- `ExternalName`: Una entrada de DNS manejado por CoreDNS
+
+```PowerShell
+  kubectl get pods
+  kubectl describe pod idpod
+  kubectl get all
+  kubectl delete deploy/httpenv 
+  kubectl create deployment httpenv --image jpetazzo/httpenv
+  kubectl get pods
+  kubectl get all
+  kubectl scale deployment httpenv --replicas=5
+  kubectl get pods
+  kubectl get pods -o wide
+  curl http://10.44.0.5:8888
+  curl http://10.44.0.5:8888 |jq ""   // formatea resultado hayq ye revisar ela version  de linux
+  kubectl expose deployment httpenv --port=8888
+  kubectl get svc
+  for i in $(seq 10); do curl -s http://10.110.57.28:8888 |jq .HOSTNAME; done
+```
+
+## Enrutando el tráfico utilizando servicios
+
+```PowerShell
+  sudo iptables -t nat -L OUTPUT
+  sudo iptables -t nat -nL KUBE-SERVICES
+  sudo iptables -t nat -nL KUBE-SVC-WHBE4CO6OW2LBOXF
+  sudo iptables -t nat -nL KUBE-SEP-ISQ22OJBOFERAA4G
+  kubectl get pods -o wide
+  kubectl describe service httpenv
+  kubectl describe endpoints httpenv 
+  kubectl get endpoints httpenv -o yaml
+```
+
+Con kubectl get service anotamos el cluster ip del servicio.
+Vamos a ver las reglas de ip-table (Iptables tiene diferentes tablas: nat, filtros, ro, etc.) del equipo local para ver como hace k8s para anotar este trafico: `sudo iptables –t nat –L OUTPUT`. Con esto vamos a listar las reglas (el chain) de output.
+Vamos a ver que tenemos dos targets: `DOCKER` (esto lo genera docker internamente) y `KUBE-SERVICES` (hace las reglas de enrutado outbound salientes de k8s)
+
+Para ver las reglas del chain `KUBE-SERVICES`:`sudo iptables –t nat –nL KUBE-SERVICES` (Vamos a ver muchas reglas y el que administra todas esas reglas es KUBE-PROXY cada vez que creamos un pod o un servicio en nuestro nodo.)
+
+Lo importante es que busques la ip que se asigno al servicio cuando se creo y anotar el target del servicio (es el código que esta mas a la izquierda)
+sudo iptables –t nat –nL EL_TARGET_QUE_ANOTAMOS nos muestra varios chain enrutados y cada una de las derivaciones de estos son una probabilidad estadística. Cuando se quiere enrutar el trafico, iptables lo hace de manera probabilística.
+
+Para ver hacia donde se dirige este trafico vamos a agarrar uno de los target de los `chains`: `sudo iptables –t nat –nL EL_TARGET_QUE_ANOTAMOS`. Esto hace un mascarade y me dice que todo el trafico que yo quiero mandar a esa ip virtual que habíamos copiado tiene que ir al nodo que aparece mas a la derecha y esa es la ip privada de nuestro nodo de k8s que esta registrado.
+
+`ENDPOINTS` son las direcciones ip de un servicio a las que necesitaríamos acceder en caso de que quisiéramos llegar a ese servicio. Podemos encontrarlos con `kubectl describe service NOMBRE_DEL_SERVICIO`
+
+Ahí va a aparecer la opción `ENDPOINTS` donde vamos ver cada una de las direcciones ip de nuestros pods. Para ver mas datos: `kubectl describe endpoints NOMBRE_DEL_SERVICIO`
+Tambien se puede ver con: `kubectl get endpoints NOMBRE_DEL_SERVICIO –o yaml`
+
+## Desplegando nuestra app en k8s
+
+```PowerShell
+  kubectl create deployment redis --image=redis
+  kubectl get all
+  kubectl delete service httpenv
+  kubectl get all
+  kubectl get pods
+  kubectl delete service httpenv
+  kubectl get pods
+  kubectl create deployment hasher --image=dockercoins/hasher:v0.1
+  kubeclt get pods
+  kubectl get pods
+  kubectl create deployment rng --image=dockercoins/rng:v0.1
+  kubectl get pods
+  kubectl create deployment webui --image=dockercoins/webui:v0.1
+  kubectl get pods
+  kubectl create deployment worker --image=dockercoins/worker:v0.1
+  kubectl logs deploy/rng
+  kubectl logs deploy/worker
+  kubectl expose deployment redis --port 6379
+  kubectl expose deployment rng --port 80
+  kubectl expose deployment hasher --port 80
+  kubectl expose deploy/webui --type=NodePort --port=80
+```
+
+### Exponer un puerto en el node
+
+```bash
+  kubectl expose deploy/webui --type=NodePort --port=80
+```
+
+## Exponiendo servicios interna y externamente (kubectl-proxy)
+
+- `kubectl-proxy` es un proxy que corre foreground y nos permite acceder a la API de kubernetes de manera autenticada.
+
+`- kubectl port-forward` nos permite realizar lo mismo que kubectl-proxy, pero accediendo a cualquier puerto del servicio expuesto en nuestro cluster
+
+```bash
+  kubectl get services kubernetes
+  curl https://10.96.0.1
+  curl -k https://10.96.0.1 //no revisar certificados
+  kubectl proxy &
+  curl http://localhost:8001
+  curl http://localhost:8001/version
+  fg
+  kubectl proxy --help
+  kubectl get service
+  kubectl port-forward svc/redis 10000:6379 &
+  telnet localhost 10000
+  info
+```
+
+## Despliegues controlados
+
+`sudo apt-get install jq -y`
+Como usar la estrategia de rolling upgrades para desplegar nuevas versiones, minimizando el impacto a nuestros usuarios:
+`Kubectl get deploy –o json`: el output de todos los deployments que tenemos en nuestro sitio
+`Kubectl get deploy –o json | jq “{name:.metadata.name} + .spec.strategy.rollingUpdate"`: itera sobre los ítems y trae de la metadata la estrategia del rollingupdate default.
+
+Esto va a mostrar los diferentes servicios.
+`MAX SURGE`: cuantos pods se crean a partir de los que tengo, o sea que si hay 100 hasta 25 pods pueden estar creándose al mismo momento por default
+`MAX UNAVAILABLE`: a lo sumo puede haber, en un determinado momento del deploy, un 25% de mis pods no disponibles por default.
+
+Hacemos el rolling upgrade de la aplicación:
+
+```bash
+  kubectl set image deploy worker worker=dockercoins/worker:v0.2
+```
+
+Cambiamos la imagen del deploy y le decimos que worker tenga la imagen `dockercoins/worker:0.2`
+
+Si le mandamos una imagen que no existe o está rota, va a mantener un minimo de 25% de los nodos trabajando como antes y asi no interrumpir el funcionamiento del servicio.
+Con kubectl rollout undo deploy worker hacemos un rollback a la versión anterior.
+
+Para cambiar la estrategia de deployment: Kubectl edit deploy worker
+Si pongo maxsurge en 1, solo se va a crear como maximo un pod nuevo por cada nuevo deployment. Si pongo maxunavailable en 0, no van a haber pods unavailables a la hora de hacer deployments. Esta estrategia es bastante conservadora: quiero crear de a uno y hasta que ese no este disponible, no cambiar nada.
+
+### Comandos
+
+- Setear una nueva version a lso pod de la imagen del docker
+
+```bash
+kubectl set image deploy worker -worker-=nombre_imagen
+```
+
+- Deshacer el ultimo deploy para revertir los cambios.
+
+```bash
+kubectl rollout undo deploy worker
+```
+
+- Editar la estrategia del deploy
+
+```bash
+kubectl edit deploy worker
+```
+
+- Ver el estatus del deployment file 
+  
+```bash
+kubectl rollout status deployment worker 
+```
+
+## cambiar el editor de kubectl
+
+```bash
+KUBE_EDITOR="nano" kubectl edit deployment redis
+```
+
+## Healthchecks
+
+**Liveness**- el kubelet utiliza estas sondas como indicador para reiniciar un contenedor. Una sonda de liveness se utiliza para detectar cuando una aplicación se está ejecutando y no puede progresar. Cuando un contenedor se encuentra en este estado, el kubelet del pod puede reiniciar el contenedor a través de su política de reinicio.
+
+**Readiness**- Este tipo de sonda se utiliza para detectar si un contenedor está listo para aceptar tráfico. Puede utilizar esta sonda para gestionar qué pods se utilizan como backends para los servicios de equilibrio de carga. Si un pod no está listo, puede eliminarse de la lista de equilibradores de carga.
+
+Tipos de comprobaciones de salud:
+
+**ExecAction** - ejecuta un comando dentro del contenedor.
+**TCPSocketAction** - realiza una comprobación TCP contra la dirección IP del contenedor en un puerto especificado.
+**HTTPGetAction** - realiza una petición HTTP GET en la IP del contenedor.
+
+## Gestionar stacks con Helm
+
+```bash
+// Instalar helm
+https://helm.sh/docs/intro/install/
+
+// Verificar si tenemos helm instalado
+helm
+
+// Configurar helm
+helm init
+
+// Verificar si Tiller está instalado
+kubectl get pods -n kube-system
+
+// Dar permisos a helm
+kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:default
+
+// Buscar paquetes
+helm search
+
+// Ejemplo de cómo instalar un paquete
+helm search prometheus
+helm inspect stable/prometheus | less
+helm install stable/prometheus --set server.service.type=NodePort --set server.persistentVolume.enabled=false
+
+// Obtener servicios
+kubectl get svc
+
+// Crear helm chart
+helm create dockercoins
+cd dockercoins
+mv templates/ templates-old
+mkdir templates
+cd ..
+kubectl get -o yaml --export deployment worker
+```
+
+**¿Qué es Helm**
+Es una herramienta que nos sirve como gestor de paquetes de Kubernetes.
+
+Conceptos:
+
+`helm`: es el cliente de Helm.
+`tiller`: es el componente del servidor. Nos sirve para recibir los comandos que le enviamos desde helm. Ya que tiller se comunica directamente con el API de Kubernetes.
+`chart`: son los paquetes manejados por helm.
+
+## Gestionando la configuración aplicativas utilizando Config Maps
+
+```bash
+#create configmaps
+kubectl create configmap haproxy --from-file=haproxy.cfg
+#see configmaps
+kubectl get configmap haproxy -o yaml | less
+kubectl apply -f haproxy.yaml
+kubectl create configmap registry --from-literal=http.addr=0.0.0.0:80
+vi registry.yaml
+kubectl apply -f  registry.yaml
+```
+
+## Volumenes
+
+Un volumen nos va a permitir compartir archivos entre diferentes pods o en nuestro host. Estos se usan para que los archivos vivan a lo largo del tiempo y el pod pueda seguir haciendo uso de estos archivos de logs, archivos de configuración o cualquier otro.
+
+**Docker**:
+
+- Permiten compartir información entre contenedores del mismo host
+- Permiten acceder a mecanismo de storage
+- Docker config y docker secrets
+
+**Kubernetes**:
+
+- Permiten compartir información entre contenedores del mismo pod
+- Permite acceder también a mecanismo de storage
+- Se utilizan para el manejo de secrets y configuraciones
+
+**Ciclo de Vida**
+
+- El volumen se crea cuando el pod se crea.
+  – Esto aplica principalmente para los volúmenes emptyDir.
+  – Para otro tipo se conectan en vez de crearse.
+- Un volumen se mantiene aún cuando se reinicie el contenedor.
+- Un volumen se destruye cuando el pod se elimina.
+
+## Introducción a namespaces
+
+**Kubernetes comienza con cuatro espacios de nombres iniciales:**
+
+default El espacio de nombres por defecto para los objetos sin ningún otro espacio de nombres
+
+`kube-system` El espacio de nombres para los objetos creados por el sistema Kubernetes
+
+`kube-public` Este espacio de nombres se crea automáticamente y es legible por todos los usuarios (incluidos los no autentificados). 
+Este espacio de nombres se reserva principalmente para el uso del clúster, en caso de que algunos recursos deban ser visibles y legibles públicamente en todo el clúster. El aspecto público de este espacio de nombres es sólo una convención, no un requisito.
+
+`kube-node-lease `Este espacio de nombres para los objetos de arrendamiento asociados a cada nodo, que mejora el rendimiento de los latidos de los nodos a medida que el clúster escala.
+
+**Cuándo utilizar varios espacios de nombres**
+
+Los espacios de nombres están pensados para su uso en entornos con muchos usuarios repartidos en varios equipos o proyectos. Para clústeres con unos pocos o decenas de usuarios, no deberías necesitar crear o pensar en espacios de nombres en absoluto. Empieza a utilizar los espacios de nombres cuando necesites las características que proporcionan.
+
+Los espacios de nombres proporcionan un ámbito para los nombres. Los nombres de los recursos deben ser únicos dentro de un espacio de nombres, pero no entre espacios de nombres. Los espacios de nombres no pueden anidarse unos dentro de otros y cada recurso de Kubernetes sólo puede estar en un espacio de nombres.
+
+Los espacios de nombres son una forma de dividir los recursos del clúster entre varios usuarios (a través de la cuota de recursos).
+
+No es necesario utilizar varios espacios de nombres sólo para separar recursos ligeramente diferentes, como diferentes versiones del mismo software: utilice etiquetas para distinguir los recursos dentro del mismo espacio de nombres.
+
+## Setear contexto para usar un namespace diferente
+
+```bash
+  kubectl config set-context --current --namespace=blue
+```
+## Crear un namespace
+
+1 app = 1 namepsace + 1 ingress + 1 service + 1 deployment
+
+```bash
+kubectl create ns proyecto1
+kubectl describe ns proyecto1
+kubectl get ns proyecto1 -o yaml
+```
+
+```yml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: proyecto1
+```
+
+
+## crear app en un namespace
+
+```yml
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: proyecto1
+  ...
+```
+
+```bash
+kubectl run nginx --image=nginx -n proyecto1
+```
+
+## crear servicio 
+
+```bash
+kubectl expose deployment/nginx --port=80 --type=NodePort -n proyecto1
+```
+
+## Autenticación y autorización
+
+`Autenticación` es el método por el cual Kubernetes deja ingresar a un usuario.
+`Autorización` es el mecanismo para que un usuario tenga una serie determinada de permisos para realizar ciertas acciones sobre el cluster.
+
+- Cuando el API server recibe un request intenta autorizarlo con uno o más de uno de los siguientes métodos: Certificados TLS, Bearer Tokens, Basic Auth o Proxy de autenticación.
+- Si cualquier método rechaza la solicitud, se devuelve un 401.
+- Si el request no es aceptado o rechazado, el usuario es anónimo.
+- Por defecto el usuario anónimo no puede hacer ninguna operación en el cluster.
+
+## Service account tokens
+
+Service Account Tokens es un mecanismo de autenticación de kubernetes y vive dentro de la plataforma, nos permite dar permisos a diferentes tipos de usuarios.
+
+- Existen en la API de kubernetes. kubectl get serviceaccount
+- Pueden crearse, eliminarse y actualizarse
+- Un service account está asociado a secretos kubectl get secrets
+- Son utilizados para otorgar permisos a aplicaciones y servicios
+
+Otro comando util para obtener el token del usuario admin es
+
+```bash
+kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep admin-user | awk '{print $1}')
+```
+
+## RBAC
+
+Role based access control(RBAC) es un mecanismo de kubernetes para gestionar roles y la asociación de estos a los usuarios para delimitar las acciones que pueden realizar dentro de la plataforma.
+
+- Un rol es un objeto que contiene una lista de rules
+- Un rolebiding asocia un rol a un usuario
+- Pueden existir usuarios, roles y rolebidings con el mismo nombre
+- Una buena práctica es tener un 1-1-1 bidings
+- Los Cluster-scope permissions permiten definir permisos a nivel de cluster y no solo namespace
+- Un pod puede estar asociado a un service-account
+
+```note
+--Crear el service account
+kubectl create sa viewer
+
+--Crear el RoleBinding
+kubectl create rolebinding viewercanview --clusterrole=view --serviceaccount=default:viewer
+
+--Correr el pod
+kubectl run eyepod --rm -ti --restart=Never --serviceaccount=viewer --image alpine
+
+--Dentro del pod, obtener la última versión estable de kubernetes
+curl https://storage.googleapis.com/kubernetes-release/release/stable.txt
+
+--Descargar la versión de kubectl
+curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.20.1/bin/linux/amd64/kubectl
+
+--Hacer a kubectl ejecutable
+
+chmod +x ./kubectl
+
+--Obtener todo
+
+./kubectl get all
+
+--Preguntas de authorization
+
+./kubectl auth can-i list nodes
+
+./kubectl auth can-i create pods
+
+./kubectl auth can-i get pods
+
+--Obtener RoleBindings
+
+kubectl get clusterrolebindings -o yaml | grep -e kubernetes-admin -e system:masters
+
+kubectl describe clusterrolebinding cluster-admin
+```
+
+### Role and ClusterRole
+
+An RBAC Role or ClusterRole contains rules that represent a set of permissions. Permissions are purely additive (there are no “deny” rules). A Role always sets permissions within a particular namespace; when you create a Role, you have to specify the namespace it belongs in. ClusterRole, by contrast, is a non-namespaced resource.
+
+### RoleBinding and ClusterRoleBinding
+
+A role binding grants the permissions defined in a role to a user or set of users. It holds a list of subjects (users, groups, or service accounts), and a reference to the role being granted. A RoleBinding grants permissions within a specific namespace whereas a ClusterRoleBinding grants that access cluster-wide.
+
+```code
+--Crear el service account
+kubectl create sa viewer
+
+--Crear el RoleBinding
+kubectl create rolebinding viewercanview --clusterrole=view --serviceaccount=default:viewer
+
+--Correr el pod
+kubectl run eyepod --rm -ti --restart=Never --serviceaccount=viewer --image alpine
+
+--Dentro del pod, obtener la última versión estable de kubernetes
+curl https://storage.googleapis.com/kubernetes-release/release/stable.txt
+
+--Descargar la versión de kubectl
+curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.20.1/bin/linux/amd64/kubectl
+
+--Hacer a kubectl ejecutable
+
+chmod +x ./kubectl
+
+--Obtener todo
+
+./kubectl get all
+
+--Preguntas de authorization
+
+./kubectl auth can-i list nodes
+
+./kubectl auth can-i create pods
+
+./kubectl auth can-i get pods
+
+--Obtener RoleBindings
+
+kubectl get clusterrolebindings -o yaml | grep -e kubernetes-admin -e system:masters
+
+kubectl describe clusterrolebinding cluster-admin
+```
+
+## Recomendaciones para implementar Kubernetes en tu organización o proyectos
+
+Próximos pasos
+
+Establece una cultura de containers en la organización
+– Escribir Dockerfiles para una aplicación
+– Escribir compose files para describir servicios
+– Mostrar las ventajas de correr aplicaciones en contenedores
+– Configurar builds automáticos de imágenes
+– Automatizar el CI/CD (staging) pipeline
+
+Developer Experience: Si tienes una persona nueva, debe sentirse acompañada en este proceso de por qué usamos kubernetes y quieres mantener la armonía de ese proceso.
+
+Elección de un cluster de producción: Hay alternativas como Cloud, Managed o Self-managed, también puedes usar un cluster grande o múltiples pequeños.
+
+Recordar el uso de namespaces: Puedes desplegar varias versiones de tu aplicación en diferentes namespaces.
+
+Servicios con estados (stateful)
+– Intenta evitarlos al principio
+– Técnicas para exponerlos a los pods (ExternalName, ClusterIP, Ambassador)
+– Storage provider, Persistent volumens, Stateful set
+
+Gestión del tráfico Http
+– Ingress controllers (virtual host routing)
+
+Configuración de la aplicación
+– Secretos y config maps
+
+Stacks deployments
+– GitOps (infraestructure as code)
+– Heml, Spinnaker o Brigade
+
+# GitOps
+
+GitOps es una práctica que gestiona toda la configuración de nuestra infraestructura y nuestras aplicaciones en producción a través de Git. Git es la fuente de verdad. Esto implica que todo proceso de infraestructura conlleva code reviews, comentarios en los archivos de configuración y enlaces a issues y PR.
+
+Infraestructura como código
+Mecanismo de convergencia
+Uso de CI como fuente de verdad
+Pull vs Push
+Developers y operaciones(git)
+Actualizaciones atómicas
+GitOps tomo tanta popularidad en la comunidad de DevOps por el impacto que genera.
+
+Poder desplegar features nuevos rápidos
+Reducir el tiempo para arreglar bugs
+Generar el sentimiento de control y empoderamiento. Confidencia y control
+20 deploys por día
+80% en ahorro del tiempo para arreglar errores en producción
+
+https://github.com/weaveworks/flux
