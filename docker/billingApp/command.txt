@@ -1,0 +1,18 @@
+##############################
+#	  DOCKER HUB	     #
+##############################
+# construyendo la imagen pasando como parametro el .jar
+docker build -t billingapp:prod --no-cache --build-arg JAR_FILE=target/*.jar .
+
+#corriendo la imagen y exponiendo los puertos necesarios ademas de asignar un nombre al contenedor
+docker run -p 80:80 -p 8080:8080 --name billingapp billingapp:prod
+
+#tag la imagen de billingapp con un nuevo tag para subirlo a la repo
+docker tag billingapp:prod anthonysnk/billing-app:0.0.1
+
+# to login docker hub
+docker login
+
+#docker push
+docker push anthonysnk/billing-app:tagname
+
